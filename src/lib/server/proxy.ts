@@ -96,7 +96,10 @@ export async function proxyRequest(options: ProxyOptions): Promise<Response> {
 			}),
 			{
 				status: 404,
-				headers: { 'content-type': 'application/json' }
+				headers: {
+					'content-type': 'application/json',
+					'Access-Control-Allow-Origin': '*'
+				}
 			}
 		);
 	}
@@ -248,6 +251,7 @@ export async function proxyRequest(options: ProxyOptions): Promise<Response> {
 	} catch (error) {
 		const duration = Date.now() - startTime;
 		const errorMessage = error instanceof Error ? error.message : String(error);
+		const errorStack = error instanceof Error ? error.stack : undefined;
 
 		// Emit error event
 		store.emit(namespace, {
@@ -259,17 +263,41 @@ export async function proxyRequest(options: ProxyOptions): Promise<Response> {
 			}
 		});
 
-		return new Response(
-			JSON.stringify({
-				error: 'Proxy error',
-				message: errorMessage,
-				targetUrl,
-				duration
-			}),
-			{
-				status: 502,
-				headers: { 'content-type': 'application/json' }
+		// Detailed error response
+		const errorDetails: Record<string, any> = {
+			error: 'Proxy error',
+			message: errorMessage,
+			targetUrl,
+			duration,
+			namespace,
+			path: targetPath,
+			method: request.method
+		};
+
+		// Add more context for common errors
+		if (errorMessage.includes('fetch failed') || errorMessage.includes('ENOTFOUND')) {
+			errorDetails.hint =
+				'Target host is unreachable. Check if the URL is correct and the server is online.';
+		} else if (errorMessage.includes('ECONNREFUSED')) {
+			errorDetails.hint = 'Connection refused. The target server is not accepting connections.';
+		} else if (errorMessage.includes('timeout')) {
+			errorDetails.hint = 'Request timed out. The target server took too long to respond.';
+		} else if (errorMessage.includes('certificate')) {
+			errorDetails.hint =
+				'SSL/TLS certificate error. The target server may have an invalid certificate.';
+		}
+
+		// Add stack trace in development
+		if (process.env.NODE_ENV === 'development' && errorStack) {
+			errorDetails.stack = errorStack;
+		}
+
+		return new Response(JSON.stringify(errorDetails, null, 2), {
+			status: 502,
+			headers: {
+				'content-type': 'application/json',
+				'Access-Control-Allow-Origin': '*'
 			}
-		);
+		});
 	}
 }

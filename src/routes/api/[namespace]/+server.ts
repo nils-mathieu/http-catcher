@@ -26,15 +26,27 @@ export const GET: RequestHandler = async ({ params }: RequestEvent) => {
 				error: 'Not found',
 				message: `Namespace "${namespace}" is not configured`
 			},
-			{ status: 404 }
+			{
+				status: 404,
+				headers: {
+					'Access-Control-Allow-Origin': '*'
+				}
+			}
 		);
 	}
 
-	return json({
-		namespace: config.namespace,
-		targetHost: config.targetHost,
-		createdAt: config.createdAt.toISOString()
-	});
+	return json(
+		{
+			namespace: config.namespace,
+			targetHost: config.targetHost,
+			createdAt: config.createdAt.toISOString()
+		},
+		{
+			headers: {
+				'Access-Control-Allow-Origin': '*'
+			}
+		}
+	);
 };
 
 /**
@@ -54,7 +66,12 @@ export const POST: RequestHandler = async ({ params, request }: RequestEvent) =>
 				error: 'Invalid JSON',
 				message: 'Request body must be valid JSON'
 			},
-			{ status: 400 }
+			{
+				status: 400,
+				headers: {
+					'Access-Control-Allow-Origin': '*'
+				}
+			}
 		);
 	}
 
@@ -66,7 +83,12 @@ export const POST: RequestHandler = async ({ params, request }: RequestEvent) =>
 				error: 'Invalid request',
 				message: 'targetHost is required and must be a string'
 			},
-			{ status: 400 }
+			{
+				status: 400,
+				headers: {
+					'Access-Control-Allow-Origin': '*'
+				}
+			}
 		);
 	}
 
@@ -79,7 +101,12 @@ export const POST: RequestHandler = async ({ params, request }: RequestEvent) =>
 				error: 'Invalid URL',
 				message: 'targetHost must be a valid URL (e.g., https://example.com)'
 			},
-			{ status: 400 }
+			{
+				status: 400,
+				headers: {
+					'Access-Control-Allow-Origin': '*'
+				}
+			}
 		);
 	}
 
@@ -92,7 +119,12 @@ export const POST: RequestHandler = async ({ params, request }: RequestEvent) =>
 			createdAt: config.createdAt.toISOString(),
 			message: 'Configuration saved successfully'
 		},
-		{ status: 200 }
+		{
+			status: 200,
+			headers: {
+				'Access-Control-Allow-Origin': '*'
+			}
+		}
 	);
 };
 
@@ -111,11 +143,23 @@ export const DELETE: RequestHandler = async ({ params }: RequestEvent) => {
 				error: 'Not found',
 				message: `Namespace "${namespace}" is not configured`
 			},
-			{ status: 404 }
+			{
+				status: 404,
+				headers: {
+					'Access-Control-Allow-Origin': '*'
+				}
+			}
 		);
 	}
 
-	return json({
-		message: `Configuration for namespace "${namespace}" deleted successfully`
-	});
+	return json(
+		{
+			message: `Configuration for namespace "${namespace}" deleted successfully`
+		},
+		{
+			headers: {
+				'Access-Control-Allow-Origin': '*'
+			}
+		}
+	);
 };

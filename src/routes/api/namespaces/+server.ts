@@ -16,13 +16,20 @@ type RequestHandler = (event: RequestEvent) => Promise<Response> | Response;
 export const GET: RequestHandler = async () => {
 	const configs = store.getAllConfigs();
 
-	return json({
-		count: configs.length,
-		namespaces: configs.map((config: NamespaceConfig) => ({
-			namespace: config.namespace,
-			targetHost: config.targetHost,
-			createdAt: config.createdAt.toISOString(),
-			activeConnections: store.getSubscriberCount(config.namespace)
-		}))
-	});
+	return json(
+		{
+			count: configs.length,
+			namespaces: configs.map((config: NamespaceConfig) => ({
+				namespace: config.namespace,
+				targetHost: config.targetHost,
+				createdAt: config.createdAt.toISOString(),
+				activeConnections: store.getSubscriberCount(config.namespace)
+			}))
+		},
+		{
+			headers: {
+				'Access-Control-Allow-Origin': '*'
+			}
+		}
+	);
 };
