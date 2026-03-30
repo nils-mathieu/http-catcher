@@ -143,10 +143,57 @@ export async function proxyRequest(options: ProxyOptions): Promise<Response> {
 			'transfer-encoding',
 			'upgrade'
 		];
-		hopByHopHeaders.forEach(header => proxyHeaders.delete(header));
+		hopByHopHeaders.forEach((header) => proxyHeaders.delete(header));
 
-		// Remove host header to avoid conflicts
-		proxyHeaders.delete('host');
+		// Parse target URL for header updates
+		const targetUrlObj = new URL(targetUrl);
+		const originalHost = request.headers.get('host');
+		const originalOrigin = request.headers.get('origin');
+		const originalReferer = request.headers.get('referer');
+
+		// Update Host header to target host
+		proxyHeaders.set('host', targetUrlObj.host);
+
+		// Update Origin header if present
+		if (originalOrigin) {
+			const originUrl = new URL(originalOrigin);
+			proxyHeaders.set('origin', `${targetUrlObj.protocol}//${targetUrlObj.host}`);
+		}
+
+		// Update Referer header if present
+		if (originalReferer) {
+			try {
+				const refererUrl = new URL(originalReferer);
+				// Replace the host in referer with target host
+				refererUrl.host = targetUrlObj.host;
+				refererUrl.protocol = targetUrlObj.protocol.replace(':', '');
+				proxyHeaders.set('referer', refererUrl.toString());
+			} catch {
+				// If referer is not a valid URL, just update to target origin
+				proxyHeaders.set('referer', `${targetUrlObj.protocol}//${targetUrlObj.host}${targetPath}`);
+			}
+		}
+
+		// Add X-Forwarded headers
+		const forwardedProto = requestEvent.url.protocol.replace(':', '');
+		const forwardedHost = originalHost || requestEvent.url.host;
+		const forwardedFor = request.headers.get('x-forwarded-for');
+		const clientIp = requestEvent.getClientAddress();
+
+		proxyHeaders.set('x-forwarded-proto', forwardedProto);
+		proxyHeaders.set('x-forwarded-host', forwardedHost);
+
+		// Append to x-forwarded-for chain
+		if (forwardedFor) {
+			proxyHeaders.set('x-forwarded-for', `${forwardedFor}, ${clientIp}`);
+		} else {
+			proxyHeaders.set('x-forwarded-for', clientIp);
+		}
+
+		// Add X-Real-IP if not present
+		if (!proxyHeaders.has('x-real-ip')) {
+			proxyHeaders.set('x-real-ip', clientIp);
+		}
 
 		// Forward the request
 		const proxyRequestInit: RequestInit = {
@@ -187,7 +234,7 @@ export async function proxyRequest(options: ProxyOptions): Promise<Response> {
 		const responseHeaders = new Headers(proxyResponse.headers);
 
 		// Remove hop-by-hop headers from response
-		hopByHopHeaders.forEach(header => responseHeaders.delete(header));
+		hopByHopHeaders.forEach((header) => responseHeaders.delete(header));
 
 		// Clone the response to send to client
 		const responseClone = proxyResponse.clone();
@@ -198,7 +245,6 @@ export async function proxyRequest(options: ProxyOptions): Promise<Response> {
 			statusText: proxyResponse.statusText,
 			headers: responseHeaders
 		});
-
 	} catch (error) {
 		const duration = Date.now() - startTime;
 		const errorMessage = error instanceof Error ? error.message : String(error);
