@@ -14,11 +14,7 @@ const config = {
 		}
 	},
 	kit: {
-		adapter: adapter({
-			// Vercel adapter configuration
-			runtime: 'nodejs20.x',
-			maxDuration: 60 // Maximum function duration in seconds
-		})
+		adapter: adapter()
 	}
 };
 
