@@ -17,7 +17,6 @@ const config = {
 		adapter: adapter({
 			// Vercel adapter configuration
 			runtime: 'nodejs20.x',
-			regions: ['iad1'], // Washington D.C. - change to your preferred region
 			maxDuration: 60 // Maximum function duration in seconds
 		})
 	}
